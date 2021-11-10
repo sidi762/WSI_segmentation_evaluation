@@ -13,8 +13,8 @@ def calculatePixelAccuracy(result, mask):
     print(result + " loaded")
     totalPixels = resultFlatten.shape[0]
     for i in range(0, totalPixels):
-        if maskFlatten[i] == 255:
-            maskFlatten[i] = 1 #Convert all the 255s to 1
+        #if maskFlatten[i] == 255:
+        #    maskFlatten[i] = 1 #Convert all the 255s to 1
         if maskFlatten[i] != resultFlatten[i]:
             unequalPixels += 1
 
@@ -25,15 +25,19 @@ def calculatePixelAccuracy(result, mask):
 
 if __name__ == '__main__':
     pool = multiprocessing.Pool(processes=4)
-    resultPath = "./results"
+    #resultPath = "./results"
+    resultPath = "./post_npy"
+    resultPrefix = "post_0.3_"
     maskPath = "./masks"
     results = []
     for root, dirs, files in os.walk(maskPath):
         for file in files:
-            resultFile = 'probmap_0.3_' + file
+            resultFile = resultPrefix + file
             maskFilePath = os.path.join(root, file)
             resultFilePath = os.path.join(resultPath,resultFile)
-            results.append(pool.apply_async(calculatePixelAccuracy, (resultFilePath, maskFilePath)))
+            if os.path.exists(resultFilePath):
+                results.append(pool.apply_async(calculatePixelAccuracy, (resultFilePath, maskFilePath)))
+
     pool.close()
     pool.join()
     resultOutput = open('pixel_accuracy.txt', mode='w+',encoding='utf-8')
@@ -43,5 +47,5 @@ if __name__ == '__main__':
         resultOutput.write("{}: {}\n".format(res.get()[0], res.get()[1]))
         total += res.get()[1]
         numOfResults += 1
-    resultOutput.write("Mean: {}\n".format(total/numOfResults))
+    resultOutput.write("Average: {}\n".format(total/numOfResults))
     resultOutput.close()
