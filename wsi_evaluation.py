@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import cv2
 
 loadedData = 0
+preprocessedData = 0
 dataLoaded = 0
 
 def loadData(result, mask):
@@ -30,8 +31,47 @@ def loadData(result, mask):
     loadedData = [resultFlatten, maskFlatten, result, mask, totalPixels]
     global dataLoaded
     dataLoaded = 1
+    _preprocessData()
+    print("Data Preprocessed")
     return loadedData
 
+def _preprocessData():
+    resultFlatten = loadedData[0]
+    maskFlatten = loadedData[1]
+    result = loadedData[2]
+    mask = loadedData[3]
+    totalPixels = loadedData[4]
+
+    unequalPixels = 0
+    totalPositives = 0
+    totalTruePositives = 0
+    totalResultPositives = 0
+    totalMaskPositives = 0
+    for i in range(0, totalPixels):
+        #resultRounded = round(resultFlatten[i]/255)
+        if resultFlatten[i] > 128:
+            resultRounded = 1
+        else: resultRounded = 0
+
+        if maskFlatten[i] != resultRounded:
+            unequalPixels += 1
+        #if maskFlatten[i] == 255:
+        #    maskFlatten[i] = 1 #Convert all the 255s to 1
+        if (maskFlatten[i] or resultRounded): #True if one of the value is not 0, the specific value doesn't matter anymore
+            totalPositives += 1
+            if (maskFlatten[i] and resultRounded):
+                totalTruePositives += 1
+                totalResultPositives += 1
+                totalMaskPositives += 1
+            elif resultRounded:
+                totalResultPositives += 1
+            elif maskFlatten[i]:
+                totalMaskPositives += 1
+    print("Total Positives: {} Total True Positives: {}".format(totalPositives, totalTruePositives))
+    print("Total Result Positives: {}".format(totalResultPositives))
+    print("Total Mask Positives: {}".format(totalMaskPositives))
+    global preprocessedData
+    preprocessedData = [unequalPixels, totalPositives, totalTruePositives, totalResultPositives, totalMaskPositives]
 
 def calculateIoU():
     #for 2D image only
@@ -44,21 +84,16 @@ def calculateIoU():
     mask = loadedData[3]
     totalPixels = loadedData[4]
 
-    unequalPixels = 0
-    totalPositives = 0
-    totalTruePositives = 0
-    for i in range(0, totalPixels):
-        #if maskFlatten[i] == 255:
-        #    maskFlatten[i] = 1 #Convert all the 255s to 1
-        resultRounded = round(resultFlatten[i]/255)
-        if (maskFlatten[i] or resultRounded): #True if one of the value is not 0, the specific value doesn't matter anymore
-            totalPositives += 1
-            if (maskFlatten[i] and resultRounded):
-                totalTruePositives += 1
+    unequalPixels = preprocessedData[0]
+    totalPositives = preprocessedData[1]
+    totalTruePositives = preprocessedData[2]
+    totalResultPositives = preprocessedData[3]
+    totalMaskPositives = preprocessedData[4]
 
     iou = totalTruePositives/totalPositives
-    #print("Total Positives: {} Total True Positives: {}".format(totalPositives, totalTruePositives))
     print("The iou for {} is {}".format(result, iou))
+
+
     return [mask,iou]
 
 def calculateDICE():
@@ -72,20 +107,16 @@ def calculateDICE():
     mask = loadedData[3]
     totalPixels = loadedData[4]
 
-    totalPositives = 0
-    totalTruePositives = 0
-    for i in range(0, totalPixels):
-        #if maskFlatten[i] == 255:
-        #    maskFlatten[i] = 1 #Convert all the 255s to 1
-        resultRounded = round(resultFlatten[i]/255)
-        if (maskFlatten[i] or resultRounded): #True if one of the value is not 0, the specific value doesn't matter anymore
-            totalPositives += 1
-            if (maskFlatten[i] and resultRounded):
-                totalTruePositives += 1
+    unequalPixels = preprocessedData[0]
+    totalPositives = preprocessedData[1]
+    totalTruePositives = preprocessedData[2]
+    totalResultPositives = preprocessedData[3]
+    totalMaskPositives = preprocessedData[4]
 
     dice = (2 * totalTruePositives)/(totalPositives+totalTruePositives)
-    #print("Total Positives: {} Total True Positives: {}".format(totalPositives, totalTruePositives))
-    print("The dice for {} is {}".format(mask, dice))
+    print("The dice for {} is {}".format(result, dice))
+
+
     return [mask, dice]
 
 def calculatePixelAccuracy():
@@ -99,16 +130,15 @@ def calculatePixelAccuracy():
     mask = loadedData[3]
     totalPixels = loadedData[4]
 
-    unequalPixels = 0
-    for i in range(0, totalPixels):
-        #if maskFlatten[i] == 255:
-        #    maskFlatten[i] = 1 #Convert all the 255s to 1
-        resultRounded = round(resultFlatten[i]/255)
-        if maskFlatten[i] != resultRounded:
-            unequalPixels += 1
+    unequalPixels = preprocessedData[0]
+    totalPositives = preprocessedData[1]
+    totalTruePositives = preprocessedData[2]
+    totalResultPositives = preprocessedData[3]
+    totalMaskPositives = preprocessedData[4]
 
     accuracy = 1 - (unequalPixels/totalPixels)
-    print("The accuracy for {} is {}".format(mask, accuracy))
+    print("The accuracy for {} is {}".format(result, accuracy))
+
     return [mask,accuracy]
 
 def calculatePrecision():
@@ -122,20 +152,15 @@ def calculatePrecision():
     mask = loadedData[3]
     totalPixels = loadedData[4]
 
-    unequalPixels = 0
-    totalResultPositives = 0
-    totalTruePositives = 0
-    for i in range(0, totalPixels):
-        #if maskFlatten[i] == 255:
-        #    maskFlatten[i] = 1 #Convert all the 255s to 1
-        if (round(resultFlatten[i]/255)): #True if one of the value is not 0, the specific value doesn't matter anymore
-            totalResultPositives += 1
-            if (maskFlatten[i]):
-                totalTruePositives += 1
+    unequalPixels = preprocessedData[0]
+    totalPositives = preprocessedData[1]
+    totalTruePositives = preprocessedData[2]
+    totalResultPositives = preprocessedData[3]
+    totalMaskPositives = preprocessedData[4]
 
     precision = totalTruePositives/totalResultPositives
-    #print("Total Result Positives: {} Total True Positives: {}".format(totalResultPositives, totalTruePositives))
-    print("The precision for {} is {}".format(mask, precision))
+    print("The precision for {} is {}".format(result, precision))
+
     return [mask, precision]
 
 def calculateSpecificity():
@@ -149,22 +174,16 @@ def calculateSpecificity():
     mask = loadedData[3]
     totalPixels = loadedData[4]
 
-    unequalPixels = 0
-    totalMaskPositives = 0
-    totalPositives = 0
-    for i in range(0, totalPixels):
-        #if maskFlatten[i] == 255:
-        #    maskFlatten[i] = 1 #Convert all the 255s to 1
-        if (maskFlatten[i]):
-            totalPositives += 1
-            totalMaskPositives += 1
-        elif (round(resultFlatten[i]/255)):
-            totalPositives += 1
-
+    unequalPixels = preprocessedData[0]
+    totalPositives = preprocessedData[1]
+    totalTruePositives = preprocessedData[2]
+    totalResultPositives = preprocessedData[3]
+    totalMaskPositives = preprocessedData[4]
 
     specificity = (totalPixels - totalPositives)/(totalPixels - totalMaskPositives)
     #print("Total Positives: {} Total True Positives: {}".format(totalPositives, totalMaskPositives))
-    print("The specificity for {} is {}".format(mask, specificity))
+    print("The specificity for {} is {}".format(result, specificity))
+
     return [mask, specificity]
 
 def calculateTPR():
@@ -178,18 +197,13 @@ def calculateTPR():
     mask = loadedData[3]
     totalPixels = loadedData[4]
 
-    unequalPixels = 0
-    totalMaskPositives = 0
-    totalTruePositives = 0
-    for i in range(0, totalPixels):
-        #if maskFlatten[i] == 255:
-        #    maskFlatten[i] = 1 #Convert all the 255s to 1
-        if (maskFlatten[i]): #True if one of the value is not 0, the specific value doesn't matter anymore
-            totalMaskPositives += 1
-            if (round(resultFlatten[i]/255)):
-                totalTruePositives += 1
+    unequalPixels = preprocessedData[0]
+    totalPositives = preprocessedData[1]
+    totalTruePositives = preprocessedData[2]
+    totalResultPositives = preprocessedData[3]
+    totalMaskPositives = preprocessedData[4]
 
     tpr = totalTruePositives/totalMaskPositives
-    #print("Total Mask Positives: {} Total True Positives: {}".format(totalMaskPositives, totalTruePositives))
-    print("The TPR for {} is {}".format(mask, tpr))
+    print("The TPR for {} is {}".format(result, tpr))
+
     return [mask, tpr]
